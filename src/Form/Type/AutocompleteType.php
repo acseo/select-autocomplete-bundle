@@ -58,10 +58,8 @@ class AutocompleteType extends AbstractType
     {
         $data = $form->getData();
 
-        if ($options['multiple']) {
-            if (!is_iterable($data)) {
-                $data = null !== $data ? [$data] : [];
-            }
+        if (!is_iterable($data)) {
+            $data = null !== $data ? [$data] : [];
         }
 
         if ($options['multiple']) {

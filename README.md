@@ -13,8 +13,32 @@ This bundle provides a simple form type to create autocompleted select of doctri
 
 ## Installation
 
+**Using composer (Not available yet)**
+
 ```shell script
 $ composer require acseo/select-autocomplete-bundle
+```
+
+**With VCS repository**
+
+In your composer.json
+
+```json
+{
+    "require": {
+        "acseo/select-autocomplete-bundle": "dev-master"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/acseo/select-autocomplete-bundle.git"
+        }
+    ]
+}
+```
+
+```shell script
+$ composer update acseo/select-autocomplete-bundle
 ```
 
 ## Usage
@@ -71,9 +95,9 @@ Allow class and property to be searchable :
 # config/packages/select_autocomplete.yaml
 
 select_autocomplete:
-    classes:                        # Defined allowed classes
+    classes:                        # Define allowed classes
         App\Entity\TargetClass:
-            properties: [name]      # Defined allowed properties
+            properties: [name]      # Define allowed properties
 ```
 
 Init your favorite js autocomplete (example with select2)
@@ -93,7 +117,7 @@ $('.select-autocomplete').each((i, el) => {
                 terms: params.term || '',
                 // format: 'json'               // (optional, json by default) allowed : json|xml|csv
             }),
-            processResults: data => ({          // Options are returned like { label: '...', value: '...' }
+            processResults: data => ({          // Options are returned by api like { label: '...', value: '...' }
                 results: data.map(item => ({      
                     id: item.value,
                     text: item.label
