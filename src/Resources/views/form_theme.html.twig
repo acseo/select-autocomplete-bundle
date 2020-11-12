@@ -1,0 +1,7 @@
+{% block acseo_autocomplete_widget %}
+    <select class="select-autocomplete {{ attr.class|default('') }}" {{ block('attributes') }}>
+        {% for choice in choices %}
+            <option value="{{ choice.value }}" selected>{{ choice.label }}</option>
+        {% endfor %}
+    </select>
+{% endblock %}

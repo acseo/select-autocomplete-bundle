@@ -1,0 +1,6 @@
+services:
+    Acseo\SelectAutocomplete\Tests\App\Command\CheckCoverageCommand:
+        tags: ['console.command']
+        arguments:
+            $serializer: '@serializer'
+            $coverage: '%kernel.project_dir%/../../coverage/index.xml'

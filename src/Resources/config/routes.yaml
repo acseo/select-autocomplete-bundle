@@ -1,0 +1,4 @@
+acseo_select_autocomplete:
+    path: /autocomplete
+    controller: Acseo\SelectAutocomplete\Controller\AutocompleteController
+    methods: GET

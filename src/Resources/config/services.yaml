@@ -1,0 +1,16 @@
+services:
+    Acseo\SelectAutocomplete\:
+        autowire: true
+        autoconfigure: true
+        resource: '../../*'
+        exclude: '../../{DependencyInjection,Resources,Events}'
+
+    Acseo\SelectAutocomplete\Doctrine\ManagerRegistry:
+        autowire: true
+        arguments:
+            $registries: '%select_autocomplete.doctrine_registries%'
+
+    Acseo\SelectAutocomplete\Doctrine\Provider\:
+        autowire: true
+        resource: '../../Doctrine/Provider/*'
+        tags: ['select_autocomplete.doctrine.providers']
