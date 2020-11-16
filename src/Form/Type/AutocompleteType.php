@@ -66,7 +66,7 @@ class AutocompleteType extends AbstractType
             $view->vars['full_name'] = ($view->vars['full_name']).'[]';
         }
 
-        $view->vars['choices'] = $this->formatter->format($options['class'], $data, $options['property']);
+        $view->vars['selected'] = $this->formatter->format($options['class'], $data, $options['property']);
         $view->vars['attr']['multiple'] = $options['multiple'];
         $view->vars['attr']['name'] = $view->vars['full_name'];
         $view->vars['attr']['required'] = $options['required'];

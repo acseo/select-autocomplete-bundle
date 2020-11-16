@@ -54,6 +54,6 @@ final class OrmDataProvider implements DataProviderInterface
                 break;
         }
 
-        return $qb->getQuery()->getResult();
+        return $qb->setMaxResults(20)->getQuery()->getResult();
     }
 }
