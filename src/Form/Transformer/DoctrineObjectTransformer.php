@@ -4,71 +4,53 @@ declare(strict_types=1);
 
 namespace Acseo\SelectAutocomplete\Form\Transformer;
 
-use Acseo\SelectAutocomplete\Doctrine\ManagerRegistry;
+use Acseo\SelectAutocomplete\Traits\PropertyAccessorTrait;
+use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\TransformationFailedException;
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
 
-class DoctrineObjectTransformer implements DataTransformerInterface
+final class DoctrineObjectTransformer implements DataTransformerInterface
 {
-    /**
-     * @var ManagerRegistry
-     */
-    private $registry;
+    use PropertyAccessorTrait;
 
-    /**
-     * @var string
-     */
+    private $manager;
+
     private $class;
 
-    /**
-     * @var bool
-     */
     private $isMultiple;
 
-    /**
-     * @var PropertyAccessor
-     */
-    private $propertyAccessor;
-
-    public function __construct(ManagerRegistry $registry, string $class, bool $isMultiple)
+    public function __construct(ObjectManager $manager, string $class, bool $isMultiple)
     {
-        $this->registry = $registry;
+        $this->manager = $manager;
         $this->class = $class;
         $this->isMultiple = $isMultiple;
-        $this->propertyAccessor = PropertyAccess::createPropertyAccessor();
     }
 
     /**
-     * Transforms an object (object) to a string (id).
+     * Transform object[]|object to string[]|string.
      *
      * @return string|string[]
      */
     public function transform($value)
     {
-        $identifier = $this->registry
-            ->getManagerForClass($this->class)
-            ->getClassMetadata($this->class)
-            ->getIdentifierFieldNames()[0] ?? 'id'
-        ;
+        $identifier = $this->getRootIdentifier();
 
         if ($this->isMultiple) {
             $data = [];
             if (is_iterable($value)) {
                 foreach ($value as $object) {
-                    $data[] = (string) $this->propertyAccessor->getValue($object, $identifier);
+                    $data[] = (string) $this->getValue($object, $identifier);
                 }
             }
 
             return $data;
         }
 
-        return (string) (null === $value ? null : $this->propertyAccessor->getValue($value, $identifier));
+        return (string) (null === $value ? null : $this->getValue($value, $identifier));
     }
 
     /**
-     * Transforms a string (id) to an object (object).
+     * Transform string[]|string to object[]|object.
      *
      * @return object|object[]|null
      */
@@ -77,32 +59,47 @@ class DoctrineObjectTransformer implements DataTransformerInterface
         if ($this->isMultiple) {
             $data = [];
 
-            if (is_iterable($value)) {
-                foreach ($value as $id) {
-                    $data[] = $this->find((string) $id);
-                }
+            if (\is_array($value)) {
+                $data = $this->findByIds($value);
             }
 
             return $data;
         }
 
-        return '' === $value || null === $value ? null : $this->find((string) $value);
+        if ('' === $value || null === $value) {
+            return null;
+        }
+
+        return $this->findByIds([$value])[0] ?? null;
     }
 
     /**
-     * Find object in DB.
+     * Find objects in database.
      *
-     * @throws TransformationFailedException if object is not found
+     * @throws TransformationFailedException if an object is not found
      */
-    private function find(string $id): object
+    private function findByIds(array $ids): array
     {
-        $class = $this->class;
-        $object = $this->registry->getManagerForClass($class)->getRepository($class)->find($id);
+        $identifier = $this->getRootIdentifier();
+        $results = $this->manager->getRepository($this->class)->findBy([$identifier => $ids]);
 
-        if (null !== $object) {
-            return $object;
+        if (\count($ids) !== \count($results)) {
+            foreach ($results as $result) {
+                $id = $this->getValue($result, $identifier);
+                if (!\in_array($id, $ids, true)) {
+                    throw new TransformationFailedException(sprintf('Object from class %s with id "%s" not found', $this->class, $id));
+                }
+            }
         }
 
-        throw new TransformationFailedException(sprintf('Object from class %s with id "%s" not found', $this->class, $id));
+        return $results;
+    }
+
+    /**
+     * Extract root identifier of $this->class.
+     */
+    private function getRootIdentifier(): string
+    {
+        return $this->manager->getClassMetadata($this->class)->getIdentifierFieldNames()[0] ?? 'id';
     }
 }

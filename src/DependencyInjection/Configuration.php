@@ -12,20 +12,11 @@ final class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder()
     {
         /** @var mixed $treeBuilder */
-        $treeBuilder = new TreeBuilder('select_autocomplete');
+        $treeBuilder = new TreeBuilder('acseo_select_autocomplete');
 
         $treeBuilder
             ->getRootNode()
             ->children()
-                ->arrayNode('classes')
-                    ->arrayPrototype()
-                        ->children()
-                            ->arrayNode('properties')
-                                ->scalarPrototype()->end()
-                            ->end()
-                        ->end()
-                    ->end()
-                ->end()
                 ->arrayNode('registries')
                     ->scalarPrototype()->end()
                     ->defaultValue(['doctrine', 'doctrine_mongodb'])

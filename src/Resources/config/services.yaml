@@ -8,9 +8,9 @@ services:
     Acseo\SelectAutocomplete\Doctrine\ManagerRegistry:
         autowire: true
         arguments:
-            $registries: '%select_autocomplete.doctrine_registries%'
+            $registries: '%acseo_select_autocomplete.doctrine_registries%'
 
-    Acseo\SelectAutocomplete\Doctrine\Provider\:
+    Acseo\SelectAutocomplete\Doctrine\DataProvider\:
         autowire: true
-        resource: '../../Doctrine/Provider/*'
-        tags: ['select_autocomplete.doctrine.providers']
+        resource: '../../Doctrine/DataProvider/*'
+        tags: ['acseo_select_autocomplete.doctrine.data_provider']

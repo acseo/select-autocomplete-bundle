@@ -19,10 +19,9 @@ final class SelectAutocompleteExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $container->setParameter('select_autocomplete.classes', $config['classes']);
-        $container->setParameter('select_autocomplete.doctrine_registries', $config['registries']);
+        $container->setParameter('acseo_select_autocomplete.doctrine_registries', $config['registries']);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
-        $loader->load('services.yaml');
+        $loader->load('config.yaml');
     }
 }

@@ -21,6 +21,7 @@ final class ManagerRegistry
 
     public function __construct(ContainerInterface $container, array $registries = [])
     {
+        // Extract doctrine registries
         foreach ($registries as $serviceId) {
             if ($container->has($serviceId)) {
                 $service = $container->get($serviceId);
