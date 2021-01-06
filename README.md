@@ -2,13 +2,10 @@
 
 **Caution : This bundle is currently in development**
 
-This bundle provides a simple form type to create autocompleted select of doctrine entities/documents. 
+This bundle provides a simple form type to create autocompleted select of doctrine resources. 
 
 ## Limitations (Will be resolved soon)
 
-- The searchable property is the property displayed
-- Search on nested properties is not possible
-- Search on multiple properties is not possible
 - Doctrine ODM is supported but provider class is missing
 
 ## Installation
