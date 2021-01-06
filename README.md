@@ -53,15 +53,6 @@ return [
 ];
 ```
 
-Import the autocomplete route :
-
-````yaml
-# config/routes.yaml
-
-acseo_select_autocomplete:
-    resource: '@SelectAutocompleteBundle/Resources/config/routes.yaml'
-````
-
 Use the autocomplete form theme :
 
 ```yaml
@@ -81,23 +72,44 @@ use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
 
 $formBuilder
     ->add('nestedProperty', AutocompleteType::class, [
-        'class' => \App\Entity\TargetClass::class,    // Class supposed to be autocompleted
-        'property' => 'name',                         // Searchable property
-        // 'strategy' => 'starts_with'                // Filter strategy (starts_with|ends_with|contains|equal)
-        // 'multiple' => true                         // Optional multiple option
+        // The class supposed to be autocompleted (required)
+        'class' => \App\Entity\TargetClass::class,
+           
+        // The searchable property
+        // This property is display by default if "display" option is not defined (default: identifier)
+        'property' => 'name',
+        
+        // Displayable label
+        // Can be a method name or a property or a function to make custom choice label (default: identifier)
+        'display' => 'customMethod',
+        'display' => function($object) {
+            return $object->getName();
+        },
+        
+        // The filter strategy
+        // Default available options are starts_with|ends_with|contains|equal (optional, default: contains)
+        // Ignored if "provider" option is defined
+        'strategy' => 'starts_with',
+        
+        // Multiple option (optional, default false)               
+        'multiple' => true,
+        
+        // Custom collection provider (Usage of partial query is allowed) (optional, default null)
+        'provider' => function(ObjectRepository $repository, string $terms) {
+            return $repository->createQueryBuilder('o')
+                ->where('o.name = :name')
+                ->setParameter('name', $terms.'%')
+                ->getQuery()
+                ->getResult()
+            ;
+        },
+        
+        // By default autocompletion is on same route the form is rendered
+        // If you want to use a specific controller, you can defined an accessible route
+        // This route will be set in attribute of input
+        // 'autocomplete_url' => '/custom_entry_point',
     ])
 ;
-```
-
-Allow class and property to be searchable :
-
-```yaml
-# config/packages/select_autocomplete.yaml
-
-select_autocomplete:
-    classes:                        # Define allowed classes
-        App\Entity\TargetClass:
-            properties: [name]      # Define allowed properties
 ```
 
 Init your favorite js autocomplete (example with select2)
@@ -110,17 +122,17 @@ $('.select-autocomplete').each((i, el) => {
         minimumInputLength: 1,
         ajax: {
             cache: false,
-            url: $el.data('url'),               // Element is rendered with entrypoint url without "terms" param
+            url: $el.data('autocomplete-url'),
             delay: 250,
             dataType: 'json',
             data: params => ({
                 terms: params.term || '',
-                // format: 'json'               // (optional, json by default) allowed : json|xml|csv
+                // autocomplete_format: 'json'  // (optional, json by default) allowed : json|xml|csv
             }),
-            processResults: data => ({          // Options are returned by api like { label: '...', value: '...' }
-                results: data.map(item => ({      
-                    id: item.value,
-                    text: item.label
+            processResults: data => ({          // Options are returned by api like { [value]: label }
+                results: Object.keys(data).map(value => ({      
+                    id: value,
+                    text: data[value]
                 }))
             })
         }
