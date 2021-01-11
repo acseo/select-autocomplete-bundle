@@ -1,0 +1,10 @@
+language: ruby
+
+services:
+    - docker
+
+install:
+    - make build start
+
+script:
+    - make tests

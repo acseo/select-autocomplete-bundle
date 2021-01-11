@@ -1,0 +1,21 @@
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    Acseo\SelectAutocomplete\Tests\App\:
+        resource: '../src/'
+        exclude: '../src/{Entity,Document}'
+        autowire: true
+        autoconfigure: true
+
+    Acseo\SelectAutocomplete\Tests\App\Command\CheckCoverageCommand:
+        tags: ['console.command']
+        arguments:
+            $serializer: '@serializer'
+            $coverage: '%kernel.project_dir%/../../coverage/index.xml'
+
+    Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry:
+        public: true
+        arguments:
+            $providers: !tagged_iterator acseo_select_autocomplete.data_provider

@@ -1,0 +1,16 @@
+doctrine_mongodb:
+    connections:
+        default:
+            server:            '%env(resolve:MONGO_URL)%'
+    default_database:          '%env(resolve:MONGO_DB_NAME)%'
+    default_document_manager:  default
+    document_managers:
+        default:
+            auto_mapping:      true
+            mappings:
+                App:
+                    is_bundle: false
+                    type:      annotation
+                    dir:       '%kernel.project_dir%/src/Document'
+                    prefix:     'Acseo\SelectAutocomplete\Tests\App\Document'
+                    alias:     App

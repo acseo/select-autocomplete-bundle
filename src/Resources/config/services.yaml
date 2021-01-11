@@ -1,0 +1,6 @@
+services:
+    Acseo\SelectAutocomplete\:
+        autowire: true
+        autoconfigure: true
+        resource: '../../*'
+        exclude: '../../{DependencyInjection,Resources}'

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="http://schema.phpunit.de/6.5/phpunit.xsd"
+    stopOnFailure="true"
+    bootstrap="tests/App/config/bootstrap.php"
+>
+    <php>
+        <ini name="error_reporting" value="E_ALL"/>
+        <ini name="memory_limit" value="-1" />
+        <server name="APP_ENV" value="test" force="true" />
+        <server name="APP_DEBUG" value="0" force="true" />
+        <server name="KERNEL_CLASS" value="Acseo\SelectAutocomplete\Tests\App\Kernel" />
+    </php>
+
+    <testsuites>
+        <testsuite name="unit tests">
+            <directory suffix="Test.php">./tests/</directory>
+        </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist>
+            <directory suffix=".php">./src/</directory>
+        </whitelist>
+    </filter>
+
+    <listeners>
+        <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener" />
+    </listeners>
+</phpunit>

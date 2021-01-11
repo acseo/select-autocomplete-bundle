@@ -1,0 +1,14 @@
+services:
+    Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry:
+        arguments:
+            $providers: !tagged_iterator acseo_select_autocomplete.data_provider
+
+    Acseo\SelectAutocomplete\DataProvider\Doctrine\ORMDataProvider:
+        tags: ['acseo_select_autocomplete.data_provider']
+        calls:
+            - setRegistry: ['@?doctrine']
+
+    Acseo\SelectAutocomplete\DataProvider\Doctrine\ODMDataProvider:
+        tags: ['acseo_select_autocomplete.data_provider']
+        calls:
+            - setRegistry: ['@?doctrine_mongodb']
