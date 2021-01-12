@@ -5,20 +5,9 @@ declare(strict_types=1);
 namespace Acseo\SelectAutocomplete\Tests\App\Form\DataProvider;
 
 use Acseo\SelectAutocomplete\DataProvider\DataProviderInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 class CustomProvider implements DataProviderInterface
 {
-    /**
-     * @var EntityManagerInterface
-     */
-    private $manager;
-
-    public function __construct(EntityManagerInterface $manager)
-    {
-        $this->manager = $manager;
-    }
-
     /**
      * Does provider supports the model class.
      */
