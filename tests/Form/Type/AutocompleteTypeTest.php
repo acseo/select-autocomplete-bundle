@@ -7,9 +7,11 @@ namespace Acseo\SelectAutocomplete\Tests\Form\Type;
 use Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\AbstractDoctrineDataProvider;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\ODMDataProvider;
+use Acseo\SelectAutocomplete\Form\Transformer\ModelTransformer;
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
 use Acseo\SelectAutocomplete\Tests\App\Document\Bar;
 use Acseo\SelectAutocomplete\Tests\App\Entity\Foo;
+use Acseo\SelectAutocomplete\Tests\App\Form\DataProvider\CustomProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -59,16 +61,24 @@ final class AutocompleteTypeTest extends KernelTestCase
 
         $this->requestStack->push($request);
 
-        $form = $this->formFactory
+        $builder = $this->formFactory
             ->createBuilder()
             ->add('test', AutocompleteType::class, [
                 'class' => Foo::class,
                 'multiple' => true,
+                'provider' => CustomProvider::class,
             ])
-            ->getForm()
         ;
 
-        self::assertInstanceOf(FormInterface::class, $form->get('test'));
+        self::assertInstanceOf(FormInterface::class, $builder->getForm()->get('test'));
+
+        $r = new \ReflectionProperty(ModelTransformer::class, 'provider');
+        $r->setAccessible(true);
+        foreach ($builder->get('test')->getModelTransformers() as $transformer) {
+            if ($transformer instanceof ModelTransformer) {
+                self::assertInstanceOf(CustomProvider::class, $r->getValue($transformer));
+            }
+        }
     }
 
     public function testBuildView()

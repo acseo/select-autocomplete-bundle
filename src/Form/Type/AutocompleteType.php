@@ -56,11 +56,13 @@ class AutocompleteType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $provider = $this->dataProviders->getProvider($options['class']);
-        $transformer = new ModelTransformer($provider, $options['class'], $options['identifier'], $options['multiple']);
+        $provider = \is_string($options['provider'])
+            ? $this->dataProviders->getProviderByClassName($options['provider'])
+            : $this->dataProviders->getProvider($options['class'])
+        ;
 
         $builder
-            ->addModelTransformer($transformer)
+            ->addModelTransformer(new ModelTransformer($provider, $options['class'], $options['identifier'], $options['multiple']))
             ->addEventListener(FormEvents::POST_SET_DATA, function (FormEvent $event) use ($options): void {
                 $request = $this->requestStack->getCurrentRequest();
 
