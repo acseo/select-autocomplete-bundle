@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Acseo\SelectAutocomplete\Tests\Form\Transformer;
 
 use Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry;
+use Acseo\SelectAutocomplete\DataProvider\Doctrine\ODMDataProvider;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\ORMDataProvider;
 use Acseo\SelectAutocomplete\Form\Transformer\ModelTransformer;
 use Acseo\SelectAutocomplete\Tests\App\Document\Bar;

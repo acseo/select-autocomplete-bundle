@@ -19,3 +19,7 @@ services:
         public: true
         arguments:
             $providers: !tagged_iterator acseo_select_autocomplete.data_provider
+
+    Acseo\SelectAutocomplete\Tests\App\Form\DataProvider\CustomProvider:
+        autowire: true
+        tags: ['acseo_select_autocomplete.data_provider']
