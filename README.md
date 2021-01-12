@@ -20,11 +20,11 @@
     
 ## Introduction
 
-This bundle will help you to build autocomplete fields in your symfony forms without declaring any controller or action.
+This bundle helps you to build autocomplete fields in your symfony forms without declaring any controller or action.
 
 Fully configurable, you can override any part of the autocompletion process very easily.
 
-Doctrine ORM & ODM are supported by default, but you can create your own providers for other extensions !
+Doctrine **ORM** & **ODM** are supported by default, but you can create your own providers for other extensions !
 
 ## Installation
 
@@ -75,7 +75,7 @@ $formBuilder
 With your favorite js library, transform the rendered input to autocomplete input (example with select2) :
 
 ```js
-$('.select-autocomplete').each((i, el) => {
+$('.acseo-select-autocomplete').each((i, el) => {
     const $el = $(el);
 
     $el.select2({
@@ -221,7 +221,7 @@ $formBuilder
         'class' => TargetClass::class,
         
         // Options values are provided by your serializer (these are default format supported by symfony serializer)
-        // Format can be overrided from js by add response_format param in data-autocomplete-url
+        // Format can be override from js by add response_format param in data-autocomplete-url
         'format' => 'json',
         // OR
         'format' => 'xml',
@@ -306,7 +306,7 @@ $formBuilder
 
 Providers classes are used to **retrieve search results** form database and **transform form view data** to model object.
 
-2 providers are included by default : ORMDataProvider and ODMDataProvider which supports multiple db connexions. You can create your provider for specific resource class or specific database.
+2 providers are included by default : ORMDataProvider and ODMDataProvider which supports multiple db connexions. You can create your provider for specific model class or specific database.
 
 This is an arbitrary example : 
 
@@ -374,4 +374,4 @@ services:
         tags: ['acseo_select_autocomplete.data_provider']
 ```
 
-Now, this provider will be invoked by default if it supports the given resource class.
+Now, this provider will be invoked by default if it supports the given model class.
