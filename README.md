@@ -117,10 +117,10 @@ You're autocomplete is now functional !
 | [display](#display)  | string callable array |    no     |   [properties](#properties)    | The displayable properties used to build label of selectable choices. This properties can be nested with path like "nestedProperty.property". |
 | [strategy](#strategy)  | string |    no     |   contains    | The strategy used to filter search results (allowed : starts_with / ends_with / contains / equals). |
 | [multiple](#multiple)  | bool |    no     |   false    | Is collection field. |
-| [format](#format)  | string callable |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). Use callable to override encoding process |
+| [format](#format)  | string callable |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). Use callable to override encoding process. |
 | [identifier](#identifier)  | string |    no     |   id    | Name of your model identifier property (will be used as value of each choice option). |
 | [autocomplete_url](#autocomplete-url)  | string |    no     |   request.pathInfo    | The entrypoint where autocomplete results can be retrieved. By default we use the route where the form has been built. This value will be set in attribute "data-autocomplete-url" of field input. |
-| [provider](#provider)  | string callable array |    no     |   null    |  Create your own custom queries or specify a provider to use. |
+| [provider](#provider)  | string callable array object |    no     |   null    |  Create your own custom queries or specify a provider to use. |
 
 
 **Tips** : You can also override any part of the process more globally by creating a class which extends AutocompleteType.
