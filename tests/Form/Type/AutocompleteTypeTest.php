@@ -7,6 +7,8 @@ namespace Acseo\SelectAutocomplete\Tests\Form\Type;
 use Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\AbstractDoctrineDataProvider;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\ODMDataProvider;
+use Acseo\SelectAutocomplete\DataProvider\Doctrine\ORMDataProvider;
+use Acseo\SelectAutocomplete\DataProvider\ProxyDataProvider;
 use Acseo\SelectAutocomplete\Form\Transformer\ModelTransformer;
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
 use Acseo\SelectAutocomplete\Tests\App\Document\Bar;
@@ -66,6 +68,7 @@ final class AutocompleteTypeTest extends KernelTestCase
             ->add('test', AutocompleteType::class, [
                 'class' => Foo::class,
                 'multiple' => true,
+                'properties' => 'id',
                 'provider' => CustomProvider::class,
             ])
         ;
@@ -92,7 +95,8 @@ final class AutocompleteTypeTest extends KernelTestCase
                 'display' => function (Foo $item) {
                     return $item->getName();
                 },
-                'property' => 'name',
+                'provider' => $this->dataProviders->getProviderByClassName(ORMDataProvider::class),
+                'properties' => 'name',
                 'strategy' => 'starts_with',
             ])
             ->getForm()
@@ -113,7 +117,7 @@ final class AutocompleteTypeTest extends KernelTestCase
         $r = new \ReflectionMethod(AutocompleteType::class, 'buildChoices');
         $r->setAccessible(true);
 
-        $data = $this->dataProviders->getProvider(Foo::class)->findByProperty(Foo::class, 'id', 1);
+        $data = $this->dataProviders->getProvider(Foo::class)->findByIds(Foo::class, 'id', [1]);
 
         $choices = $r->invoke($this->autocompleteType, $data, [
             'identifier' => 'id',
@@ -128,7 +132,7 @@ final class AutocompleteTypeTest extends KernelTestCase
 
         $choices = $r->invoke($this->autocompleteType, $data, [
             'identifier' => 'name',
-            'display' => 'id',
+            'display' => ['id'],
         ]);
 
         self::assertEquals($data[0]->getId(), $choices[$data[0]->getName()] ?? null);
@@ -159,27 +163,66 @@ final class AutocompleteTypeTest extends KernelTestCase
 
         $response = $r->invoke($this->autocompleteType, $request, [
             'class' => Foo::class,
-            'display' => 'name',
+            'properties' => ['name'],
             'identifier' => 'id',
-            'provider' => function (string $terms, AbstractDoctrineDataProvider $provider) {
-                return $provider->getRepository(Foo::class)
-                    ->findBy(['name' => $terms])
-                ;
-            },
+            'display' => ['name'],
+            'strategy' => 'equals',
+            'provider' => new ProxyDataProvider([
+                'find_by_terms' => function (string $terms, AbstractDoctrineDataProvider $provider) {
+                    return $provider->getRepository(Foo::class)
+                        ->findBy(['name' => $terms])
+                    ;
+                },
+            ], $this->dataProviders->getProvider(Foo::class)),
         ]);
 
-        self::assertEquals(json_encode([2 => 'Foo 1']), $response->getContent());
+        self::assertEquals(json_encode([4 => 'Foo 1']), $response->getContent());
 
-        $request->query->set('q', 'Bar 1');
+        $request->query->set('q', 'Bar 0');
         $response = $r->invoke($this->autocompleteType, $request, [
             'class' => Bar::class,
-            'display' => 'name',
             'identifier' => 'id',
-            'property' => 'name',
+            'properties' => ['name', 'children.name'],
+            'display' => ['name'],
             'strategy' => 'equals',
-            'provider' => ODMDataProvider::class,
+            'provider' => $this->dataProviders->getProviderByClassName(ODMDataProvider::class),
         ]);
 
-        self::assertEquals(json_encode([2 => 'Bar 1']), $response->getContent());
+        self::assertEquals(json_encode([1 => 'Bar 0']), $response->getContent());
+    }
+
+    public function testResolveProvider()
+    {
+        $r = new \ReflectionMethod(AutocompleteType::class, 'resolveProvider');
+        $r->setAccessible(true);
+
+        self::assertInstanceOf(ProxyDataProvider::class, $r->invoke($this->autocompleteType, Foo::class, function () {}));
+        self::assertInstanceOf(ProxyDataProvider::class, $r->invoke($this->autocompleteType, Foo::class, []));
+
+        try {
+            $r->invoke($this->autocompleteType, Foo::class, Foo::class);
+            self::assertTrue(false);
+        } catch (\Exception $e) {
+            self::assertInstanceOf(\InvalidArgumentException::class, $e);
+        }
+
+        $customProvider = new ProxyDataProvider();
+        self::assertEquals($customProvider, $r->invoke($this->autocompleteType, Foo::class, $customProvider));
+
+        try {
+            $r->invoke($this->autocompleteType, Foo::class, new Foo());
+            self::assertTrue(false);
+        } catch (\Exception $e) {
+            self::assertInstanceOf(\UnexpectedValueException::class, $e);
+        }
+
+        try {
+            $r->invoke($this->autocompleteType, self::class, null);
+            self::assertTrue(false);
+        } catch (\Exception $e) {
+            self::assertInstanceOf(\RuntimeException::class, $e);
+        }
+
+        self::assertInstanceOf(ORMDataProvider::class, $r->invoke($this->autocompleteType, Foo::class, null));
     }
 }

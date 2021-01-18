@@ -31,21 +31,19 @@ final class DataProviderRegistryTest extends KernelTestCase
 
         self::assertNotNull($providerRegistry->getProviderByClassName(ODMDataProvider::class));
 
-        self::expectException(\RuntimeException::class);
-        $providerRegistry = new DataProviderRegistry([$this]);
+        self::expectException(\UnexpectedValueException::class);
+        new DataProviderRegistry([$this]);
     }
 
     public function testGetProvider()
     {
         self::assertInstanceOf(ODMDataProvider::class, $this->providerRegistry->getProvider(Bar::class));
-        self::expectException(\RuntimeException::class);
-        $this->providerRegistry->getProvider(self::class);
+        self::assertNull($this->providerRegistry->getProvider(self::class));
     }
 
     public function testGetProviderByClassName()
     {
         self::assertInstanceOf(ODMDataProvider::class, $this->providerRegistry->getProviderByClassName(ODMDataProvider::class));
-        self::expectException(\RuntimeException::class);
-        $this->providerRegistry->getProviderByClassName(self::class);
+        self::assertNull($this->providerRegistry->getProviderByClassName(self::class));
     }
 }

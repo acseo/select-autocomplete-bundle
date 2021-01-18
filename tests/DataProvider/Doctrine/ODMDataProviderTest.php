@@ -33,9 +33,9 @@ final class ODMDataProviderTest extends KernelTestCase
         self::assertFalse($this->provider->supports(Foo::class));
     }
 
-    public function testFindByProperty()
+    public function testFindByIds()
     {
-        $data = $this->provider->findByProperty(Bar::class, 'id', 1);
+        $data = $this->provider->findByIds(Bar::class, 'id', [1]);
         self::assertCount(1, $data);
     }
 
@@ -53,7 +53,7 @@ final class ODMDataProviderTest extends KernelTestCase
         self::assertInstanceOf(ManagerRegistry::class, $registry);
 
         $provider = new ODMDataProvider();
-        self::expectException(\RuntimeException::class);
+        self::expectException(\BadMethodCallException::class);
         $r->invoke($provider);
     }
 
@@ -65,25 +65,83 @@ final class ODMDataProviderTest extends KernelTestCase
         $manager = $r->invoke($this->provider, Bar::class);
         self::assertInstanceOf(DocumentManager::class, $manager);
 
-        self::expectException(\RuntimeException::class);
+        self::expectException(\BadMethodCallException::class);
         $r->invoke($this->provider, self::class);
     }
 
     public function testFindByTerms()
     {
-        $results = $this->provider->findByTerms(Bar::class, 'name', 'Bar 1', 'equals');
+        $results = $this->provider->findByTerms(Bar::class, ['name'], 'Bar 1', 'equals');
         self::assertCount(1, $results);
 
-        $results = $this->provider->findByTerms(Bar::class, 'name', 'Bar', 'starts_with');
-        self::assertCount(20, $results);
-
-        $results = $this->provider->findByTerms(Bar::class, 'name', '13', 'ends_with');
+        $results = $this->provider->findByTerms(Bar::class, ['name'], 'Bar 1', 'equals');
         self::assertCount(1, $results);
 
-        $results = $this->provider->findByTerms(Bar::class, 'name', 'ar', 'contains');
+        $results = $this->provider->findByTerms(Bar::class, ['name'], 'Bar', 'starts_with');
         self::assertCount(20, $results);
 
-        self::expectException(\RuntimeException::class);
-        $results = $this->provider->findByTerms(Bar::class, 'name', '1', 'undefined');
+        $results = $this->provider->findByTerms(Bar::class, ['child.name'], '13', 'ends_with');
+        self::assertCount(1, $results);
+
+        $results = $this->provider->findByTerms(Bar::class, ['name'], 'ar', 'contains');
+        self::assertCount(20, $results);
+
+        $results = $this->provider->findByTerms(Bar::class, ['items.name'], '13', 'ends_with');
+        self::assertCount(1, $results);
+
+        $results = $this->provider->findByTerms(Bar::class, ['embedded.name'], '13', 'ends_with');
+        self::assertCount(1, $results);
+
+        self::expectException(\InvalidArgumentException::class);
+        $this->provider->findByTerms(Bar::class, ['name'], '1', 'undefined');
+    }
+
+    public function testAddLookup()
+    {
+        $r = new \ReflectionMethod(ODMDataProvider::class, 'addLookup');
+        $r->setAccessible(true);
+
+        $qb = $this->provider->getRepository(Bar::class)
+            ->createAggregationBuilder()
+            ->hydrate(Bar::class)
+        ;
+
+        self::assertEquals('name', $r->invoke($this->provider, $qb, Bar::class, 'name'));
+
+        try {
+            $qb->getPipeline();
+            self::assertTrue(false);
+        } catch (\Exception $e) {
+            self::assertInstanceOf(\OutOfRangeException::class, $e);
+        }
+
+        try {
+            $r->invoke($this->provider, $qb, Bar::class, 'undefined.name');
+            self::assertTrue(false);
+        } catch (\Exception $e) {
+            self::assertTrue(true);
+        }
+
+        self::assertEquals('', $r->invoke($this->provider, $qb, Bar::class, ''));
+    }
+
+    public function testIsLookupExist()
+    {
+        $r = new \ReflectionMethod(ODMDataProvider::class, 'isLookupExist');
+        $r->setAccessible(true);
+
+        $qb = $this->provider->getRepository(Bar::class)
+            ->createAggregationBuilder()
+            ->hydrate(Bar::class)
+        ;
+
+        $qb->lookup(Bar::class)
+            ->localField('child')
+            ->foreignField('id')
+            ->alias('child_lkp')
+        ;
+
+        self::assertTrue($r->invoke($this->provider, $qb, 'child_lkp'));
+        self::assertFalse($r->invoke($this->provider, $qb, 'children_lkp'));
     }
 }

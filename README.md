@@ -8,7 +8,7 @@
     * [Usage](#usage)
     * [Form options](#form-options)
         + [class](#class)
-        + [property](#property)
+        + [properties](#properties)
         + [display](#display)
         + [strategy](#strategy)
         + [multiple](#multiple)
@@ -65,7 +65,7 @@ use App\Entity\TargetClass;
 $formBuilder
     ->add('example', AutocompleteType::class, [
         'class' => TargetClass::class,
-        'property' => 'name',             // The searchable property used for query
+        'properties' => 'name',           // The searchable properties used for query
         'display' => 'fullname',          // Displayable label in select options
         'strategy' => 'starts_with',      // The filter strategy of search action
     ])
@@ -113,14 +113,14 @@ You're autocomplete is now functional !
 |  Name  |  Type  |  Required  |  Default  |  Description  |
 |--------|--------|------------|-----------|-----------|
 | [class](#class)  | string |    yes     |   null    | The model class supposed to be autocompleted |
-| [property](#property)  | string |    no     |   id    | The property used in database query to filter search results of autocomplete action. This property cannot be nested by default but you can use "provider" option to do custom query. |
-| [display](#display)  | string callable |    no     |   [property](#property)    | The displayable property used to build label of selectable choices. This property can be nested with path like "nestedProperty.property". |
+| [properties](#properties)  | string array |    no     |   id    | The properties used in database query to filter search results of autocomplete action. This properties can be nested with path like "nestedProperty.property". |
+| [display](#display)  | string callable array |    no     |   [properties](#properties)    | The displayable properties used to build label of selectable choices. This properties can be nested with path like "nestedProperty.property". |
 | [strategy](#strategy)  | string |    no     |   contains    | The strategy used to filter search results (allowed : starts_with / ends_with / contains / equals). |
 | [multiple](#multiple)  | bool |    no     |   false    | Is collection field. |
 | [format](#format)  | string |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). |
 | [identifier](#identifier)  | string |    no     |   id    | Name of your model identifier property (will be used as value of each choice option). |
-| [autocomplete_url](#autocomplete-url)  | string |    no     |   request.pathInfo    | The entrypoint where autocomplete results can be retrieved. By default we use the route where the form has been built. This value will be set in attribute data-autocomplete-url of select input. |
-| [provider](#provider)  | string function |    no     |   null    |  Create your own custom query or specify a provider to use. |
+| [autocomplete_url](#autocomplete-url)  | string |    no     |   request.pathInfo    | The entrypoint where autocomplete results can be retrieved. By default we use the route where the form has been built. This value will be set in attribute "data-autocomplete-url" of field input. |
+| [provider](#provider)  | string callable array |    no     |   null    |  Create your own custom queries or specify a provider to use. |
 
 
 **Tips** : You can also override any part of the process more globally by creating a class which extends AutocompleteType.
@@ -138,9 +138,7 @@ $formBuilder
 ;
 ```
 
-### property
-
-This option is not used if "provider" option value is callable.
+### properties
 
 ```php
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
@@ -149,7 +147,9 @@ use App\Entity\TargetClass;
 $formBuilder
     ->add('example', AutocompleteType::class, [
         'class' => TargetClass::class,
-        'property' => 'targetProperty'
+        'properties' => 'targetProperty',
+        // OR
+        'properties' => ['name', 'profile.email'],
     ])
 ;
 ```
@@ -168,6 +168,8 @@ $formBuilder
         // OR
         'display' => 'nestedProperty.targetProperty',
         // OR
+        'display' => ['user.firstName', 'user.lastName'],
+        // OR 
         'display' => function(TargetClass $object): string {
             return $object->getTargetProperty();
         },
@@ -277,8 +279,8 @@ use App\Entity\TargetClass;
 $formBuilder
     ->add('example', AutocompleteType::class, [
         'class' => TargetClass::class,
-        
-        // Prevent provider invokation and build your own search results (Usage of partial query is allowed)
+
+        // Override provider on search action to retrieve custom collection (Usage of partial query is allowed)
         // The second argument is the default provider which supports the model class
         'provider' => function(string $terms, AbstractDoctrineDataProvider $provider) {
             return $provider->getRepository(TargetClass::class)
@@ -291,11 +293,35 @@ $formBuilder
         },
         
         // OR
+            
+        // Use your own provider object
+        'provider' => $myProvider,
+
+        // OR
 
         // You can specify provider to use (the service has to be tagged as acseo_select_autocomplete.data_provider).
         // 2 providers are included by default : ORMDataProvider and ODMDataProvider.
         // You can add many providers, for specific model class or other kind of databases !
         'provider' => MyCustomProvider::class,
+                
+        // OR
+        
+        // Create custom provider
+        // To know more about providers, please see Providers section.
+        'provider' => [
+            'find_by_ids' => function(array $ids, AbstractDoctrineDataProvider $provider) {
+                return $provider->getRepository(TargetClass::class)->findBy(['id' => $ids]);
+            },
+            'find_by_terms' => function(string $terms, AbstractDoctrineDataProvider $provider) {
+                return $provider->getRepository(TargetClass::class)
+                    ->createQueryBuilder('o')
+                    ->where('o.name LIKE :name')
+                    ->setParameter('name', $terms.'%')
+                    ->getQuery()
+                    ->getResult()
+                ;
+            }
+        ],
         
         // If provider option is not set, the provider used is the first which supports model class
     ])
@@ -306,9 +332,9 @@ $formBuilder
 
 Providers classes are used to **retrieve search results** form database and **transform form view data** to model object.
 
-2 providers are included by default : ORMDataProvider and ODMDataProvider which supports multiple db connexions. You can create your provider for specific model class or specific database.
+2 Doctrine providers are included by default : ORMDataProvider and ODMDataProvider which supports multiple db connexions.
 
-This is an arbitrary example : 
+You can create your own provider for specific model class or specific database. This is an arbitrary example : 
 
 ```php
 <?php
@@ -340,21 +366,21 @@ class CustomDataProvider implements DataProviderInterface
     /**
      * Used to retrieve object with form view data (reverseTransform).
      */
-    public function findByProperty(string $class, string $property, $value): array
+    public function findByIds(string $class, string $identifier, array $ids): array
     {
-        return $this->manager->findOneBy([ $property => $value ]);
+        return $this->manager->findOneBy([ $identifier => $ids ]);
     }
     
     /**
      * Find collection results of autocomplete action.
      */
-    public function findByTerms(string $class, string $property, string $terms, string $strategy): array
+    public function findByTerms(string $class, array $properties, string $terms, string $strategy): array
     {
         $qb = $this->manager->createQuery($class);
         
         switch ($strategy) {
             case 'contains':
-                $qb->contains($property, $terms);
+                $qb->contains($properties, $terms);
             break;
             
             // ... Rest of strategies code
@@ -365,7 +391,7 @@ class CustomDataProvider implements DataProviderInterface
 }
 ```
 
-Then, tag this service with `acseo_select_autocomplete.data_provider`.
+Finally, tag this service with `acseo_select_autocomplete.data_provider`.
 
 ```yaml
 services:

@@ -17,12 +17,12 @@ interface DataProviderInterface
      *
      * @return object[]|array[]
      */
-    public function findByTerms(string $class, string $property, string $terms, string $strategy): array;
+    public function findByTerms(string $class, array $properties, string $terms, string $strategy): array;
 
     /**
-     * Find object by property value.
+     * Retrieve object from database.
      *
      * @return object[]
      */
-    public function findByProperty(string $class, string $property, $value): array;
+    public function findByIds(string $class, string $identifier, array $ids): array;
 }

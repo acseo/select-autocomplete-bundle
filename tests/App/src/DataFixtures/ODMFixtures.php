@@ -14,7 +14,12 @@ class ODMFixtures extends Fixture
     {
         for ($i = 0; $i < 20; ++$i) {
             $manager->persist(
-                (new Bar())->setName('Bar '.$i)
+                (new Bar())
+                    ->setName('Bar '.$i)
+                    ->setChild((new Bar())->setName('Child '.$i))
+                    ->addChild((new Bar())->setName('Children '.$i))
+                    ->addItem((new Bar())->setName('Item '.$i))
+                    ->setEmbedded((new Bar())->setName('Embedded '.$i))
             );
         }
 
