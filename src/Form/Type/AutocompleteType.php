@@ -244,6 +244,14 @@ class AutocompleteType extends AbstractType
      */
     protected function resolveProvider(string $class, $provider): DataProviderInterface
     {
+        if (!\is_callable($provider) && \is_object($provider)) {
+            if (!$provider instanceof DataProviderInterface) {
+                throw new \UnexpectedValueException(sprintf('Provider must implements %s', DataProviderInterface::class));
+            }
+
+            return $provider;
+        }
+
         if (\is_string($provider)) {
             $service = $this->dataProviders->getProviderByClassName($provider);
 
@@ -252,14 +260,6 @@ class AutocompleteType extends AbstractType
             }
 
             return $service;
-        }
-
-        if (!\is_callable($provider) && \is_object($provider)) {
-            if (!$provider instanceof DataProviderInterface) {
-                throw new \UnexpectedValueException(sprintf('Provider must implements %s', DataProviderInterface::class));
-            }
-
-            return $provider;
         }
 
         $service = $this->dataProviders->getProvider($class);

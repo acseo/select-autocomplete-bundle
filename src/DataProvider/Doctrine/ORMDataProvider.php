@@ -4,13 +4,22 @@ declare(strict_types=1);
 
 namespace Acseo\SelectAutocomplete\DataProvider\Doctrine;
 
-final class ORMDataProvider extends AbstractDoctrineDataProvider
+class ORMDataProvider extends AbstractDoctrineDataProvider
 {
-    public const REGISTRY = 'doctrine';
+    protected const REGISTRY = 'doctrine';
+    protected const DEFAULT_QUERY_ALIAS = 'o';
 
     public function findByTerms(string $class, array $properties, string $value, string $strategy): array
     {
-        $rootAlias = 'o';
+        return $this
+            ->createSearchQueryBuilder(static::DEFAULT_QUERY_ALIAS, $class, $properties, $value, $strategy)
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
+    public function createSearchQueryBuilder(string $rootAlias, string $class, array $properties, string $value, string $strategy)
+    {
         /** @var \Doctrine\ORM\EntityRepository $repository */
         $repository = $this->getRepository($class);
         $qb = $repository->createQueryBuilder($rootAlias)->distinct(true);
@@ -32,10 +41,10 @@ final class ORMDataProvider extends AbstractDoctrineDataProvider
             }
         }
 
-        return $qb->setMaxResults(self::SEARCH_LIMIT_RESULTS)->getQuery()->getResult();
+        return $qb->setMaxResults(static::SEARCH_LIMIT_RESULTS);
     }
 
-    private function applyFilter($qb, string $alias, string $property, string $paramName, string $value, string $strategy): void
+    protected function applyFilter($qb, string $alias, string $property, string $paramName, string $value, string $strategy): void
     {
         switch ($strategy) {
             case 'equals':

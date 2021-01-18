@@ -20,7 +20,7 @@ interface DataProviderInterface
     public function findByTerms(string $class, array $properties, string $terms, string $strategy): array;
 
     /**
-     * Retrieve object from database.
+     * Retrieve objects from database.
      *
      * @return object[]
      */

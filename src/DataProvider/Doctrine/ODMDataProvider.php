@@ -4,36 +4,47 @@ declare(strict_types=1);
 
 namespace Acseo\SelectAutocomplete\DataProvider\Doctrine;
 
-final class ODMDataProvider extends AbstractDoctrineDataProvider
+class ODMDataProvider extends AbstractDoctrineDataProvider
 {
-    public const REGISTRY = 'doctrine_mongodb';
+    protected const REGISTRY = 'doctrine_mongodb';
 
     public function findByTerms(string $class, array $properties, string $value, string $strategy): array
+    {
+        return $this
+            ->createSearchAggregationBuilder($class, $properties, $value, $strategy)
+            ->execute()
+            ->toArray()
+        ;
+    }
+
+    public function createSearchAggregationBuilder(string $class, array $properties, string $value, string $strategy)
     {
         /** @var \Doctrine\ODM\MongoDB\Repository\DocumentRepository $repository */
         $repository = $this->getRepository($class);
         /** @var \Doctrine\ODM\MongoDB\Aggregation\Builder qb */
-        $qb = $repository->createAggregationBuilder()->hydrate($class);
+        $aggregationBuilder = $repository->createAggregationBuilder()->hydrate($class);
 
         $fields = [];
         foreach ($properties as $property) {
-            $fields[] = $this->addLookup($qb, $class, $property);
+            $fields[] = $this->addLookup($aggregationBuilder, $class, $property);
         }
 
-        $match = $qb->match();
+        $match = $aggregationBuilder->match();
         foreach ($fields as $field) {
             $match->addOr(
-                $this->applyFilter($qb, $field, $value, $strategy)
+                $this->applyFilter($aggregationBuilder, $field, $value, $strategy)
             );
         }
 
-        return $qb->limit(self::SEARCH_LIMIT_RESULTS)->execute()->toArray();
+        $aggregationBuilder->limit(static::SEARCH_LIMIT_RESULTS);
+
+        return $aggregationBuilder;
     }
 
     /**
-     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $qb
+     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $aggregationBuilder
      */
-    private function addLookup($qb, string $class, string $propertyPath): string
+    protected function addLookup($aggregationBuilder, string $class, string $propertyPath): string
     {
         $properties = explode('.', $propertyPath);
         $alias = '';
@@ -56,14 +67,15 @@ final class ODMDataProvider extends AbstractDoctrineDataProvider
                 $localField = $alias.$prop;
                 $alias .= $propertyAlias;
 
-                if (!$this->isLookupExist($qb, $alias)) {
-                    $qb->lookup($targetClass)
+                if (!$this->isLookupExist($aggregationBuilder, $alias)) {
+                    $aggregationBuilder
+                        ->lookup($targetClass)
                         ->localField($isOwningSide ? $localField : '_id')
                         ->foreignField($isOwningSide ? '_id' : $classMetadata->fieldMappings[$prop]['mappedBy'])
                         ->alias($alias)
                     ;
 
-                    $qb->unwind("\$${alias}");
+                    $aggregationBuilder->unwind("\$${alias}");
                 }
 
                 $class = $targetClass;
@@ -77,33 +89,33 @@ final class ODMDataProvider extends AbstractDoctrineDataProvider
     }
 
     /**
-     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $qb
+     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $aggregationBuilder
      */
-    private function applyFilter($qb, string $property, string $value, string $strategy)
+    protected function applyFilter($aggregationBuilder, string $property, string $value, string $strategy)
     {
         $mongoRegexClass = class_exists('\MongoDB\BSON\Regex') ? '\MongoDB\BSON\Regex' : '\MongoRegex';
 
         switch ($strategy) {
             case 'ends_with':
-                return $qb->matchExpr()->field($property)->equals(new $mongoRegexClass(sprintf('%s$', $value), 'i'));
+                return $aggregationBuilder->matchExpr()->field($property)->equals(new $mongoRegexClass(sprintf('%s$', $value), 'i'));
             case 'starts_with':
-                return $qb->matchExpr()->field($property)->equals(new $mongoRegexClass(sprintf('^%s', $value), 'i'));
+                return $aggregationBuilder->matchExpr()->field($property)->equals(new $mongoRegexClass(sprintf('^%s', $value), 'i'));
             case 'contains':
-                return $qb->matchExpr()->field($property)->equals(new $mongoRegexClass($value, 'i'));
+                return $aggregationBuilder->matchExpr()->field($property)->equals(new $mongoRegexClass($value, 'i'));
             case 'equals':
-                return $qb->matchExpr()->field($property)->equals($value);
+                return $aggregationBuilder->matchExpr()->field($property)->equals($value);
             default:
                 throw new \InvalidArgumentException(sprintf('Strategy "%s" is not supported', $strategy));
         }
     }
 
     /**
-     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $qb
+     * @param \Doctrine\ODM\MongoDB\Aggregation\Builder $aggregationBuilder
      */
-    private function isLookupExist($qb, string $alias): bool
+    protected function isLookupExist($aggregationBuilder, string $alias): bool
     {
         try {
-            $pipeline = $qb->getPipeline();
+            $pipeline = $aggregationBuilder->getPipeline();
         } catch (\Exception $e) {
             $pipeline = [];
         }
