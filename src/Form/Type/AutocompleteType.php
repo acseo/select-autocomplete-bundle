@@ -119,7 +119,7 @@ class AutocompleteType extends AbstractType
                 'property' => null,
                 'strategy' => 'contains',
                 'multiple' => false,
-                'format' => null,
+                'format' => static::RESPONSE_DEFAULT_FORMAT,
                 'display' => null,
                 'provider' => null,
                 'autocomplete_url' => null,
@@ -133,7 +133,7 @@ class AutocompleteType extends AbstractType
             ->setAllowedTypes('strategy', ['string', 'null'])
             ->setAllowedTypes('properties', ['string', 'array'])
             ->setAllowedTypes('property', ['string', 'array', 'null'])
-            ->setAllowedTypes('format', ['string', 'null'])
+            ->setAllowedTypes('format', ['string', 'callable'])
             ->setAllowedTypes('identifier', ['string', 'null'])
             ->setAllowedTypes('multiple', ['boolean'])
             ->setAllowedTypes('provider', ['callable', 'string', 'array', 'object', 'null'])
@@ -153,6 +153,15 @@ class AutocompleteType extends AbstractType
             })
             ->setNormalizer('provider', function (OptionsResolver $options, $value) {
                 return $this->resolveProvider($options['class'], $value);
+            })
+            ->setNormalizer('format', function (OptionsResolver $options, $value) {
+                if (\is_callable($value)) {
+                    return $value;
+                }
+
+                return function (array $normalized, Response $response, string $expectedFormat = null) use ($value): Response {
+                    return $this->encodeSearchResponse($normalized, $response, $expectedFormat ?? $value);
+                };
             })
         ;
     }
@@ -226,19 +235,16 @@ class AutocompleteType extends AbstractType
         $collection = $options['provider']->findByTerms($options['class'], $options['properties'], $terms, $options['strategy']);
 
         // Normalize to exploitable choices and encode response
-        $format = $request->query->get(static::RESPONSE_FORMAT_KEY) ?? $options['format'] ?? static::RESPONSE_DEFAULT_FORMAT;
-        $content = $this->encoder->encode($this->buildChoices($collection, $options), $format);
-
-        $response = new Response($content, 200, [
-            'Content-Type' => sprintf('application/%s', $format),
-        ]);
+        $normalized = $this->buildChoices($collection, $options);
+        $expectedFormat = $request->query->get(static::RESPONSE_FORMAT_KEY);
+        $response = $options['format']($normalized, new Response(), $expectedFormat);
 
         // No need to let process continue, stop process and print response to get best performances.
         return $response->send();
     }
 
     /**
-     * Resolve provider service by analyzing provider option.
+     * Resolve provider service by analyzing provider option value.
      *
      * @param string|callable|array|object $provider
      */
@@ -277,5 +283,15 @@ class AutocompleteType extends AbstractType
         }
 
         return $service;
+    }
+
+    /**
+     * Encode search response to expected format.
+     */
+    protected function encodeSearchResponse(array $normalized, Response $response, string $expectedFormat): Response
+    {
+        $response->headers->set('Content-Type', sprintf('application/%s', $expectedFormat));
+
+        return $response->setContent($this->encoder->encode($normalized, $expectedFormat));
     }
 }

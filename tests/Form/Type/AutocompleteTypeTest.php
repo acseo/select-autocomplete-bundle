@@ -17,6 +17,7 @@ use Acseo\SelectAutocomplete\Tests\App\Form\DataProvider\CustomProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class AutocompleteTypeTest extends KernelTestCase
 {
@@ -98,6 +99,9 @@ final class AutocompleteTypeTest extends KernelTestCase
                 'provider' => $this->dataProviders->getProviderByClassName(ORMDataProvider::class),
                 'properties' => 'name',
                 'strategy' => 'starts_with',
+                'format' => function (array $normalized, Response $response): Response {
+                    return $response->setContent(json_encode($normalized));
+                },
             ])
             ->getForm()
         ;
@@ -167,6 +171,9 @@ final class AutocompleteTypeTest extends KernelTestCase
             'identifier' => 'id',
             'display' => ['name'],
             'strategy' => 'equals',
+            'format' => function (array $normalized, Response $response): Response {
+                return $response->setContent(json_encode($normalized));
+            },
             'provider' => new ProxyDataProvider([
                 'find_by_terms' => function (string $terms, AbstractDoctrineDataProvider $provider) {
                     return $provider->getRepository(Foo::class)
@@ -185,6 +192,9 @@ final class AutocompleteTypeTest extends KernelTestCase
             'properties' => ['name', 'children.name'],
             'display' => ['name'],
             'strategy' => 'equals',
+            'format' => function (array $normalized, Response $response): Response {
+                return $response->setContent(json_encode($normalized));
+            },
             'provider' => $this->dataProviders->getProviderByClassName(ODMDataProvider::class),
         ]);
 

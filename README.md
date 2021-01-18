@@ -117,7 +117,7 @@ You're autocomplete is now functional !
 | [display](#display)  | string callable array |    no     |   [properties](#properties)    | The displayable properties used to build label of selectable choices. This properties can be nested with path like "nestedProperty.property". |
 | [strategy](#strategy)  | string |    no     |   contains    | The strategy used to filter search results (allowed : starts_with / ends_with / contains / equals). |
 | [multiple](#multiple)  | bool |    no     |   false    | Is collection field. |
-| [format](#format)  | string |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). |
+| [format](#format)  | string callable |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). Use callable to override encoding process |
 | [identifier](#identifier)  | string |    no     |   id    | Name of your model identifier property (will be used as value of each choice option). |
 | [autocomplete_url](#autocomplete-url)  | string |    no     |   request.pathInfo    | The entrypoint where autocomplete results can be retrieved. By default we use the route where the form has been built. This value will be set in attribute "data-autocomplete-url" of field input. |
 | [provider](#provider)  | string callable array |    no     |   null    |  Create your own custom queries or specify a provider to use. |
@@ -217,6 +217,7 @@ $formBuilder
 ```php
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
 use App\Entity\TargetClass;
+use Symfony\Component\HttpFoundation\Response;
 
 $formBuilder
     ->add('example', AutocompleteType::class, [
@@ -224,13 +225,14 @@ $formBuilder
         
         // Options values are provided by your serializer (these are default format supported by symfony serializer)
         // Format can be override from js by add response_format param in data-autocomplete-url
-        'format' => 'json',
+        'format' => 'json', // xml|csv|yaml|...
+
         // OR
-        'format' => 'xml',
-        // OR
-        'format' => 'csv',
-        // OR
-        'format' => 'yaml',
+
+        // Encode response with your logic 
+        'format' => function (array $normalized, Response $response): Response {
+            return $response->setContent(json_encode($normalized));
+        }
     ])
 ;
 ```
@@ -290,6 +292,20 @@ $formBuilder
                 ->getQuery()
                 ->getResult()
             ;
+
+            // You can also just override default query (available with ORM & ODM Doctrine providers)
+            //
+            // if ($provider instanceof ORMDataProvider) {
+            //     $qb = $provider->createSearchQueryBuilder('o', TargetClass::class, ['name'], $terms, 'starts_with');
+            //     // Custom query
+            //     return $qb->getQuery()->getResult();
+            // }
+            //
+            // if ($provider instanceof ODMDataProvider) {
+            //     $qb = $provider->createSearchAggregationBuilder(TargetClass::class, ['name'], $terms, 'starts_with');
+            //     // Custom query
+            //     return $qb->execute()->toArray();
+            // }
         },
         
         // OR
