@@ -140,7 +140,7 @@ class AutocompleteType extends AbstractType
             ->setAllowedTypes('autocomplete_url', ['string', 'null'])
 
             ->setNormalizer('properties', function (OptionsResolver $options, $value) {
-                $properties = null !== $options['property'] && null === $value ? $options['property'] : $value;
+                $properties = $options['property'] ?? $value;
 
                 return \is_array($properties) ? $properties : [$properties];
             })
