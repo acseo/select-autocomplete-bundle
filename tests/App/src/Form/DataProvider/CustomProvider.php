@@ -19,7 +19,7 @@ class CustomProvider implements DataProviderInterface
     /**
      * Used to retrieve object with form view data (reverseTransform).
      */
-    public function findByProperty(string $class, string $property, $value): array
+    public function findByIds(string $class, string $identifier, array $ids): array
     {
         return [];
     }
@@ -27,7 +27,7 @@ class CustomProvider implements DataProviderInterface
     /**
      * Find collection results of autocomplete action.
      */
-    public function findByTerms(string $class, string $property, string $terms, string $strategy): array
+    public function findByTerms(string $class, array $properties, string $terms, string $strategy): array
     {
         return [];
     }

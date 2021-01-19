@@ -15,7 +15,7 @@ final class DataProviderRegistry
     {
         foreach ($providers as $provider) {
             if (!$provider instanceof DataProviderInterface) {
-                throw new \RuntimeException(sprintf('Provider must be instance of "%s"', DataProviderInterface::class));
+                throw new \UnexpectedValueException(sprintf('Provider must be instance of "%s"', DataProviderInterface::class));
             }
 
             $this->providers[] = $provider;
@@ -25,7 +25,7 @@ final class DataProviderRegistry
     /**
      * Get provider for a specific resource class.
      */
-    public function getProvider(string $resourceClass): DataProviderInterface
+    public function getProvider(string $resourceClass): ?DataProviderInterface
     {
         foreach ($this->providers as $provider) {
             if ($provider->supports($resourceClass)) {
@@ -33,13 +33,13 @@ final class DataProviderRegistry
             }
         }
 
-        throw new \RuntimeException(sprintf('No provider found for resource class "%s"', $resourceClass));
+        return null;
     }
 
     /**
      * Get specific provider by service class name.
      */
-    public function getProviderByClassName(string $class): DataProviderInterface
+    public function getProviderByClassName(string $class): ?DataProviderInterface
     {
         foreach ($this->providers as $provider) {
             if (\get_class($provider) === $class) {
@@ -47,6 +47,6 @@ final class DataProviderRegistry
             }
         }
 
-        throw new \RuntimeException(sprintf('No provider found with class "%s"', $class));
+        return null;
     }
 }

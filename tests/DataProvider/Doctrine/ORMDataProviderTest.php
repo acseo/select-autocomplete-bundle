@@ -33,9 +33,9 @@ final class ORMDataProviderTest extends KernelTestCase
         self::assertFalse($this->provider->supports(Bar::class));
     }
 
-    public function testFindByProperty()
+    public function testFindByIds()
     {
-        $data = $this->provider->findByProperty(Foo::class, 'id', 1);
+        $data = $this->provider->findByIds(Foo::class, 'id', [1]);
         self::assertCount(1, $data);
     }
 
@@ -53,7 +53,7 @@ final class ORMDataProviderTest extends KernelTestCase
         self::assertInstanceOf(Registry::class, $registry);
 
         $provider = new ORMDataProvider();
-        self::expectException(\RuntimeException::class);
+        self::expectException(\BadMethodCallException::class);
         $r->invoke($provider);
     }
 
@@ -65,25 +65,25 @@ final class ORMDataProviderTest extends KernelTestCase
         $manager = $r->invoke($this->provider, Foo::class);
         self::assertInstanceOf(EntityManagerInterface::class, $manager);
 
-        self::expectException(\RuntimeException::class);
+        self::expectException(\BadMethodCallException::class);
         $r->invoke($this->provider, self::class);
     }
 
     public function testFindByTerms()
     {
-        $results = $this->provider->findByTerms(Foo::class, 'name', 'Foo 1', 'equals');
+        $results = $this->provider->findByTerms(Foo::class, ['name'], 'Foo 1', 'equals');
         self::assertCount(1, $results);
 
-        $results = $this->provider->findByTerms(Foo::class, 'name', 'Foo', 'starts_with');
+        $results = $this->provider->findByTerms(Foo::class, ['name'], 'Foo', 'starts_with');
         self::assertCount(20, $results);
 
-        $results = $this->provider->findByTerms(Foo::class, 'name', 'oo', 'contains');
+        $results = $this->provider->findByTerms(Foo::class, ['name'], 'oo', 'contains');
         self::assertCount(20, $results);
 
-        $results = $this->provider->findByTerms(Foo::class, 'name', '13', 'ends_with');
+        $results = $this->provider->findByTerms(Foo::class, ['children.name'], '13', 'ends_with');
         self::assertCount(1, $results);
 
-        self::expectException(\RuntimeException::class);
-        $results = $this->provider->findByTerms(Foo::class, 'name', '1', 'undefined');
+        self::expectException(\InvalidArgumentException::class);
+        $this->provider->findByTerms(Foo::class, ['name'], '1', 'undefined');
     }
 }

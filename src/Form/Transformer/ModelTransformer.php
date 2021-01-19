@@ -89,6 +89,6 @@ final class ModelTransformer implements DataTransformerInterface
      */
     private function findByIds(array $ids): array
     {
-        return $this->provider->findByProperty($this->class, $this->identifier, $ids);
+        return $this->provider->findByIds($this->class, $this->identifier, $ids);
     }
 }

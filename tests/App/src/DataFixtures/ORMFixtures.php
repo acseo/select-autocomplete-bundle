@@ -14,7 +14,10 @@ class ORMFixtures extends Fixture
     {
         for ($i = 0; $i < 20; ++$i) {
             $manager->persist(
-                (new Foo())->setName('Foo '.$i)
+                (new Foo())
+                    ->setName('Foo '.$i)
+                    ->setChild((new Foo())->setName('Child '.$i))
+                    ->addChild((new Foo())->setName('Children '.$i))
             );
         }
 

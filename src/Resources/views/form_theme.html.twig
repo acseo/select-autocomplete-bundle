@@ -1,7 +1,7 @@
-{% block acseo_select_autocomplete_widget %}
+{%- block acseo_select_autocomplete_widget -%}
     <select {{ block('attributes') }}>
-        {% for value, label in selected %}
+        {%- for value, label in selected -%}
             <option value="{{ value }}" selected>{{ label }}</option>
-        {% endfor %}
+        {%- endfor -%}
     </select>
-{% endblock %}
+{%- endblock -%}

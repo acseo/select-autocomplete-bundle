@@ -41,9 +41,9 @@ final class ModelTransformerTest extends KernelTestCase
         $dataProviders = $container->get(DataProviderRegistry::class);
 
         $this->fooProvider = $dataProviders->getProvider(Foo::class);
-        $this->foo = $this->fooProvider->findByProperty(Foo::class, 'id', 1)[0];
+        $this->foo = $this->fooProvider->findByIds(Foo::class, 'id', [1])[0];
         $this->barProvider = $dataProviders->getProvider(Bar::class);
-        $this->bar = $this->barProvider->findByProperty(Bar::class, 'id', 1)[0];
+        $this->bar = $this->barProvider->findByIds(Bar::class, 'id', [1])[0];
     }
 
     public function testTransform(): void

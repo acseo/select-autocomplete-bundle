@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Acseo\SelectAutocomplete\Form\Type;
 
+use Acseo\SelectAutocomplete\DataProvider\DataProviderInterface;
 use Acseo\SelectAutocomplete\DataProvider\DataProviderRegistry;
+use Acseo\SelectAutocomplete\DataProvider\ProxyDataProvider;
 use Acseo\SelectAutocomplete\Form\Transformer\ModelTransformer;
 use Acseo\SelectAutocomplete\Traits\PropertyAccessorTrait;
 use Symfony\Component\Form\AbstractType;
@@ -56,13 +58,8 @@ class AutocompleteType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $provider = \is_string($options['provider'])
-            ? $this->dataProviders->getProviderByClassName($options['provider'])
-            : $this->dataProviders->getProvider($options['class'])
-        ;
-
         $builder
-            ->addModelTransformer(new ModelTransformer($provider, $options['class'], $options['identifier'], $options['multiple']))
+            ->addModelTransformer(new ModelTransformer($options['provider'], $options['class'], $options['identifier'], $options['multiple']))
             ->addEventListener(FormEvents::POST_SET_DATA, function (FormEvent $event) use ($options): void {
                 $request = $this->requestStack->getCurrentRequest();
 
@@ -115,35 +112,58 @@ class AutocompleteType extends AbstractType
      */
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults([
-            'class' => null,
-            'property' => 'id',
-            'strategy' => 'contains',
-            'multiple' => false,
-            'format' => null,
-            'display' => null,
-            'provider' => null,
-            'autocomplete_url' => null,
-            'identifier' => 'id',
-        ]);
-
         $resolver
+            ->setDefaults([
+                'class' => null,
+                'properties' => 'id',
+                'property' => null,
+                'strategy' => 'contains',
+                'multiple' => false,
+                'format' => static::RESPONSE_DEFAULT_FORMAT,
+                'display' => null,
+                'provider' => null,
+                'autocomplete_url' => null,
+                'identifier' => 'id',
+            ])
+
             ->setRequired(['class'])
+
             ->setAllowedTypes('class', ['string'])
-            ->setAllowedTypes('display', ['string', 'callable', 'null'])
+            ->setAllowedTypes('display', ['string', 'callable', 'array', 'null'])
             ->setAllowedTypes('strategy', ['string', 'null'])
-            ->setAllowedTypes('property', ['string', 'null'])
-            ->setAllowedTypes('format', ['string', 'null'])
+            ->setAllowedTypes('properties', ['string', 'array'])
+            ->setAllowedTypes('property', ['string', 'array', 'null'])
+            ->setAllowedTypes('format', ['string', 'callable'])
             ->setAllowedTypes('identifier', ['string', 'null'])
             ->setAllowedTypes('multiple', ['boolean'])
-            ->setAllowedTypes('provider', ['callable', 'string', 'null'])
+            ->setAllowedTypes('provider', ['callable', 'string', 'array', 'object', 'null'])
             ->setAllowedTypes('autocomplete_url', ['string', 'null'])
-        ;
 
-        $resolver->setNormalizer('display', function (OptionsResolver $options, $optionValue) {
-            // Fallback to "property" option value if "display" option is null
-            return \is_string($options['property']) && null === $optionValue ? $options['property'] : $optionValue;
-        });
+            ->setNormalizer('properties', function (OptionsResolver $options, $value) {
+                $properties = $options['property'] ?? $value;
+
+                return \is_array($properties) ? $properties : [$properties];
+            })
+            ->setNormalizer('display', function (OptionsResolver $options, $value) {
+                if (null === $value) {
+                    return $options['properties'];
+                }
+
+                return \is_array($value) ? $value : [$value];
+            })
+            ->setNormalizer('provider', function (OptionsResolver $options, $value) {
+                return $this->resolveProvider($options['class'], $value);
+            })
+            ->setNormalizer('format', function (OptionsResolver $options, $value) {
+                if (\is_callable($value)) {
+                    return $value;
+                }
+
+                return function (array $normalized, Response $response, string $expectedFormat = null) use ($value): Response {
+                    return $this->encodeSearchResponse($normalized, $response, $expectedFormat ?? $value);
+                };
+            })
+        ;
     }
 
     /**
@@ -168,14 +188,21 @@ class AutocompleteType extends AbstractType
     protected function buildChoices(iterable $data, array $options): array
     {
         $choices = [];
-        $choiceLabel = $options['display'];
+        $display = $options['display'];
 
         foreach ($data as $item) {
+            if (\is_callable($display)) {
+                $label = $display($item);
+            } else {
+                $values = [];
+                foreach ($display as $property) {
+                    $values[] = $this->getValue($item, $property);
+                }
+                $label = implode(' ', $values);
+            }
+
             // Build choices like [value => label]
-            $choices[$this->getValue($item, $options['identifier'])] = \is_callable($choiceLabel)
-                ? $choiceLabel($item)
-                : $this->getValue($item, $choiceLabel)
-            ;
+            $choices[$this->getValue($item, $options['identifier'])] = $label;
         }
 
         return $choices;
@@ -204,27 +231,67 @@ class AutocompleteType extends AbstractType
     {
         $terms = (string) $request->query->get('q');
 
-        // Determine usable provider
-        $provider = \is_string($options['provider'])
-            ? $this->dataProviders->getProviderByClassName($options['provider'])
-            : $this->dataProviders->getProvider($options['class'])
-        ;
-
         // Call provider to fetch results
-        $collection = \is_callable($options['provider'])
-            ? $options['provider']($terms, $provider)
-            : $provider->findByTerms($options['class'], $options['property'], $terms, $options['strategy'])
-        ;
+        $collection = $options['provider']->findByTerms($options['class'], $options['properties'], $terms, $options['strategy']);
 
         // Normalize to exploitable choices and encode response
-        $format = $request->query->get(static::RESPONSE_FORMAT_KEY) ?? $options['format'] ?? static::RESPONSE_DEFAULT_FORMAT;
-        $content = $this->encoder->encode($this->buildChoices($collection, $options), $format);
-
-        $response = new Response($content, 200, [
-            'Content-Type' => sprintf('application/%s', $format),
-        ]);
+        $normalized = $this->buildChoices($collection, $options);
+        $expectedFormat = $request->query->get(static::RESPONSE_FORMAT_KEY);
+        $response = $options['format']($normalized, new Response(), $expectedFormat);
 
         // No need to let process continue, stop process and print response to get best performances.
         return $response->send();
+    }
+
+    /**
+     * Resolve provider service by analyzing provider option value.
+     *
+     * @param string|callable|array|object $provider
+     */
+    protected function resolveProvider(string $class, $provider): DataProviderInterface
+    {
+        if (!\is_callable($provider) && \is_object($provider)) {
+            if (!$provider instanceof DataProviderInterface) {
+                throw new \UnexpectedValueException(sprintf('Provider must implements %s', DataProviderInterface::class));
+            }
+
+            return $provider;
+        }
+
+        if (\is_string($provider)) {
+            $service = $this->dataProviders->getProviderByClassName($provider);
+
+            if (null === $service) {
+                throw new \InvalidArgumentException(sprintf('No provider found with class "%s"', $provider));
+            }
+
+            return $service;
+        }
+
+        $service = $this->dataProviders->getProvider($class);
+
+        if (\is_callable($provider)) {
+            return new ProxyDataProvider(['find_by_terms' => $provider], $service);
+        }
+
+        if (\is_array($provider)) {
+            return new ProxyDataProvider($provider, $service);
+        }
+
+        if (null === $service) {
+            throw new \RuntimeException(sprintf('No provider found for model class "%s"', $class));
+        }
+
+        return $service;
+    }
+
+    /**
+     * Encode search response to expected format.
+     */
+    protected function encodeSearchResponse(array $normalized, Response $response, string $expectedFormat): Response
+    {
+        $response->headers->set('Content-Type', sprintf('application/%s', $expectedFormat));
+
+        return $response->setContent($this->encoder->encode($normalized, $expectedFormat));
     }
 }

@@ -31,9 +31,9 @@ abstract class AbstractDoctrineDataProvider implements DataProviderInterface
         return null !== $this->registry && null !== $this->registry->getManagerForClass($class);
     }
 
-    public function findByProperty(string $class, string $property, $value): array
+    public function findByIds(string $class, string $identifier, array $ids): array
     {
-        return $this->getRepository($class)->findBy([$property => $value]);
+        return $this->getRepository($class)->findBy([$identifier => $ids]);
     }
 
     public function getRepository(string $class): ObjectRepository
@@ -49,7 +49,7 @@ abstract class AbstractDoctrineDataProvider implements DataProviderInterface
     protected function getRegistry(): AbstractManagerRegistry
     {
         if (null === $this->registry) {
-            throw new \RuntimeException(sprintf('The doctrine registry "%s" expected by provider "%s" was not found', static::REGISTRY, static::class));
+            throw new \BadMethodCallException(sprintf('The doctrine registry "%s" expected by provider "%s" was not found', static::REGISTRY, static::class));
         }
 
         return $this->registry;
@@ -60,7 +60,7 @@ abstract class AbstractDoctrineDataProvider implements DataProviderInterface
         $manager = $this->getRegistry()->getManagerForClass($class);
 
         if (null === $manager) {
-            throw new \RuntimeException(sprintf('Object manager not found for class "%s"', $class));
+            throw new \BadMethodCallException(sprintf('Object manager not found for class "%s"', $class));
         }
 
         return $manager;
