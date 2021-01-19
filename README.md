@@ -37,7 +37,7 @@ $ composer require acseo/select-autocomplete-bundle
 Enable the bundle :
 
 ```php
-// config/bundles/php
+// config/bundles.php
 
 return [
     Acseo\SelectAutocomplete\SelectAutocompleteBundle::class => ['all' => true]
