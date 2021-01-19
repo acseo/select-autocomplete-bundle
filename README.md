@@ -44,7 +44,7 @@ return [
 ];
 ```
 
-Import the autocomplete form theme :
+Use the bundle form theme globally (or locally in your templates) :
 
 ```yaml
 # config/packages/twig.yaml
@@ -60,14 +60,13 @@ Let's start by a simple example :
 
 ```php
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
-use App\Entity\TargetClass;
+use App\Entity\User;
 
 $formBuilder
     ->add('example', AutocompleteType::class, [
-        'class' => TargetClass::class,
-        'properties' => 'name',           // The searchable properties used for query
-        'display' => 'fullname',          // Displayable label in select options
-        'strategy' => 'starts_with',      // The filter strategy of search action
+        'class' => User::class,
+        // The searchable properties used for query
+        'properties' => ['profile.firstName', 'profile.lastName'],
     ])
 ;
 ```
@@ -106,7 +105,7 @@ Please note 3 important things in this js example :
 - The query param `q`, which represents the search terms, has to be added to data-autocomplete-url value.
 - By default search results are returned by entrypoint like `[{ "value": "label" }]`.
 
-You're autocomplete is now functional !
+Your autocomplete is now functional !
 
 ## Form options
 
