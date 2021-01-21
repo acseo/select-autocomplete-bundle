@@ -10,6 +10,7 @@ use Acseo\SelectAutocomplete\DataProvider\Doctrine\ODMDataProvider;
 use Acseo\SelectAutocomplete\DataProvider\Doctrine\ORMDataProvider;
 use Acseo\SelectAutocomplete\DataProvider\ProxyDataProvider;
 use Acseo\SelectAutocomplete\Form\Transformer\ModelTransformer;
+use Acseo\SelectAutocomplete\Form\Transformer\SimpleTransformer;
 use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
 use Acseo\SelectAutocomplete\Tests\App\Document\Bar;
 use Acseo\SelectAutocomplete\Tests\App\Entity\Foo;
@@ -58,7 +59,7 @@ final class AutocompleteTypeTest extends KernelTestCase
     public function testBuildForm()
     {
         $request = Request::create('/', 'GET', [
-            'acseo_autocomplete_form_name' => 'form[test][]',
+            'acseo_autocomplete_uid' => 'test',
             'q' => 'x',
         ]);
 
@@ -66,10 +67,17 @@ final class AutocompleteTypeTest extends KernelTestCase
 
         $builder = $this->formFactory
             ->createBuilder()
+            ->add('prop', AutocompleteType::class, [
+                'class' => Foo::class,
+                'multiple' => true,
+                'transformer' => new SimpleTransformer(true),
+            ])
             ->add('test', AutocompleteType::class, [
+                'uniq_id' => 'test',
                 'class' => Foo::class,
                 'multiple' => true,
                 'properties' => 'id',
+                'display' => ['name'],
                 'provider' => CustomProvider::class,
             ])
         ;
@@ -92,16 +100,19 @@ final class AutocompleteTypeTest extends KernelTestCase
         $form = $this->formFactory
             ->createBuilder()
             ->add('test', AutocompleteType::class, [
+                'uniq_id' => 'test',
                 'class' => Foo::class,
                 'display' => function (Foo $item) {
                     return $item->getName();
                 },
+                'multiple' => true,
                 'provider' => $this->dataProviders->getProviderByClassName(ORMDataProvider::class),
                 'properties' => 'name',
                 'strategy' => 'starts_with',
                 'format' => function (array $normalized, Response $response): Response {
                     return $response->setContent(json_encode($normalized));
                 },
+                'model_transformer' => new ModelTransformer($this->dataProviders->getProviderByClassName(ORMDataProvider::class), Foo::class, 'id', true),
             ])
             ->getForm()
         ;
@@ -109,11 +120,29 @@ final class AutocompleteTypeTest extends KernelTestCase
         $vars = $form->createView()->children['test']->vars;
 
         self::assertIsArray($vars['selected']);
-        self::assertFalse($vars['attr']['multiple'] ?? null);
+        self::assertTrue($vars['attr']['multiple'] ?? null);
         self::assertTrue($vars['attr']['required'] ?? null);
-        self::assertEquals('form[test]', $vars['attr']['name'] ?? null);
+        self::assertEquals('form[test][]', $vars['attr']['name'] ?? null);
         self::assertEquals('acseo-select-autocomplete', $vars['attr']['class'] ?? null);
-        self::assertEquals('/?acseo_autocomplete_form_name=form[test]', $vars['attr']['data-autocomplete-url'] ?? null);
+        self::assertEquals('/?acseo_autocomplete_uid=test', $vars['attr']['data-autocomplete-url'] ?? null);
+
+        $form = $this->formFactory
+            ->createBuilder()
+            ->add('test', AutocompleteType::class, [
+                'class' => Foo::class,
+                'identifier' => 'name',
+                'display' => 'name',
+                'transformer' => false,
+                'multiple' => true,
+                'data' => ['Foo 1'],
+            ])
+            ->getForm()
+        ;
+
+        $vars = $form->createView()->children['test']->vars;
+
+        self::assertIsArray($vars['selected']);
+        self::assertTrue(isset($vars['selected']['Foo 1']));
     }
 
     public function testBuildChoices()
@@ -153,8 +182,8 @@ final class AutocompleteTypeTest extends KernelTestCase
 
         $this->requestStack->push(Request::create('/'));
 
-        $url = $r->invoke($this->autocompleteType, 'form[test]');
-        self::assertEquals('/?acseo_autocomplete_form_name=form[test]', $url);
+        $url = $r->invoke($this->autocompleteType, '6f960ad7d4d50c3fd708888902c2d20c');
+        self::assertEquals('/?acseo_autocomplete_uid=6f960ad7d4d50c3fd708888902c2d20c', $url);
     }
 
     public function testRenderAutocompleteResponse()
