@@ -14,6 +14,7 @@
         + [multiple](#multiple)
         + [format](#format)
         + [identifier](#identifier)
+        + [transformer](#transformer)
         + [autocomplete_url](#autocomplete-url)
         + [provider](#provider)
     * [Providers](#providers)
@@ -119,6 +120,7 @@ Your autocomplete is now functional !
 | [format](#format)  | string callable |    no     |   json    | Default format used to encode choices of autocomplete response. Values allowed are provided by your own serializer (basically json / xml / csv / yaml in symfony serializer). Use callable to override encoding process. |
 | [identifier](#identifier)  | string |    no     |   id    | Name of your model identifier property (will be used as value of each choice option). |
 | [autocomplete_url](#autocomplete-url)  | string |    no     |   request.pathInfo    | The entrypoint where autocomplete results can be retrieved. By default we use the route where the form has been built. This value will be set in attribute "data-autocomplete-url" of field input. |
+| [transformer](#transformer)  | boolean object |    no     |   ModelTransformer    |  Disable/Override the form type transformer. If this value is false, transformer deals only with the identifier(s) value(s) (useful for filters). |
 | [provider](#provider)  | string callable array object |    no     |   null    |  Create your own custom queries or specify a provider to use. |
 
 
@@ -266,6 +268,27 @@ $formBuilder
         
         // This option value will be set in data-autocomplete-url of select input attributes
         'autocomplete_url' => '/my-custom-entrypoint?param1=kevin',
+    ])
+;
+```
+
+### transformer
+
+```php
+use Acseo\SelectAutocomplete\Form\Type\AutocompleteType;
+use App\Entity\TargetClass;
+
+$formBuilder
+    ->add('example', AutocompleteType::class, [
+        'class' => TargetClass::class,
+        
+        // Don't transform identifiers values to objects
+        'transformer' => false,
+
+        // OR
+
+        // Use custom transformer
+        'transformer' => $myCustomTransformer
     ])
 ;
 ```
